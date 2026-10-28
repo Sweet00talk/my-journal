@@ -1,0 +1,1114 @@
+<!DOCTYPE html>
+<html lang="ms" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jurnal & Habit Tracker Harian</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        darkBg: '#121212',
+                        darkCard: '#1e1e1e',
+                        darkBorder: '#2d2d2d',
+                        accentPurple: '#bb86fc',
+                        accentPink: '#ff79c6',
+                        accentCyan: '#8be9fd',
+                        accentGreen: '#50fa7b',
+                        accentRed: '#ff5555',
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #121212;
+            color: #e0e0e0;
+            font-family: 'Inter', sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        /* Custom Scrollbar for Habit Matrix */
+        .custom-scrollbar::-webkit-scrollbar {
+            height: 6px;
+            width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #181818;
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #333333;
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #bb86fc;
+        }
+
+        /* Sticky Left Column for Habit Tracker */
+        .sticky-col {
+            position: sticky;
+            left: 0;
+            z-index: 10;
+            background-color: #1e1e1e;
+        }
+        
+        .sticky-col-header {
+            position: sticky;
+            left: 0;
+            z-index: 20;
+            background-color: #252525;
+        }
+    </style>
+</head>
+<body class="min-h-screen pb-12 antialiased">
+
+    <!-- AUTH SECTION / SCREEN (Shown when logged out) -->
+    <div id="authScreen" class="min-h-screen flex items-center justify-center p-4 bg-darkBg">
+        <div class="bg-darkCard border border-darkBorder w-full max-w-md rounded-2xl p-6 sm:p-8 space-y-6 shadow-2xl">
+            <div class="text-center space-y-2">
+                <div class="inline-flex p-3 bg-accentPurple/20 text-accentPurple rounded-2xl mb-1">
+                    <i class="fa-solid fa-book-journal-whills text-3xl"></i>
+                </div>
+                <h2 id="authTitle" class="text-2xl font-bold text-white">Log Masuk Jurnal</h2>
+                <p id="authSubtitle" class="text-xs text-gray-400">Akses habit & refleksi harian anda di mana-mana jua peranti.</p>
+            </div>
+
+            <!-- Custom Notification Banner -->
+            <div id="authAlert" class="hidden p-3 rounded-xl text-xs font-semibold bg-accentRed/20 text-accentRed border border-accentRed/40"></div>
+
+            <form id="authForm" onsubmit="handleAuthSubmit(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold text-gray-300 mb-1">E-mel</label>
+                    <input type="email" id="authEmail" required placeholder="nama@email.com" class="w-full bg-darkBg border border-darkBorder rounded-xl p-3 text-sm text-white focus:border-accentPurple outline-none transition">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-300 mb-1">Kata Laluan</label>
+                    <input type="password" id="authPassword" required minlength="6" placeholder="••••••••" class="w-full bg-darkBg border border-darkBorder rounded-xl p-3 text-sm text-white focus:border-accentPurple outline-none transition">
+                </div>
+
+                <button type="submit" id="authSubmitBtn" class="w-full bg-accentPurple text-darkBg font-bold py-3 rounded-xl transition hover:opacity-90 shadow-lg text-sm">
+                    Log Masuk
+                </button>
+            </form>
+
+            <div class="text-center pt-2 border-t border-darkBorder">
+                <button onclick="toggleAuthMode()" id="authToggleBtn" class="text-xs text-accentPurple hover:underline font-medium">
+                    Belum ada akaun? Daftar Akaun Baharu
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MAIN APP SCREEN (Shown when logged in) -->
+    <div id="appScreen" class="hidden">
+        <!-- Top Navigation Header -->
+        <header class="bg-darkCard border-b border-darkBorder sticky top-0 z-50 shadow-md">
+            <div class="max-w-7xl mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-3">
+                <div class="flex items-center space-x-3">
+                    <div class="p-2 bg-accentPurple/20 text-accentPurple rounded-lg">
+                        <i class="fa-solid fa-book-journal-whills text-xl"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-lg font-bold text-white leading-tight">Jurnal & Habit Tracker</h1>
+                        <p class="text-xs text-gray-400 flex items-center gap-1.5">
+                            <span class="w-2 h-2 rounded-full bg-accentGreen"></span>
+                            <span id="userEmailDisplay" class="font-medium text-gray-300">User</span>
+                        </p>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-end">
+                    <!-- Month & Year Picker Controls -->
+                    <div class="flex items-center space-x-2 bg-darkBg p-1.5 rounded-xl border border-darkBorder">
+                        <button onclick="changeMonth(-1)" class="p-2 text-gray-400 hover:text-white rounded-lg hover:bg-darkCard transition">
+                            <i class="fa-solid fa-chevron-left"></i>
+                        </button>
+                        
+                        <div class="flex items-center space-x-2">
+                            <select id="monthSelect" onchange="onDateSelectionChange()" class="bg-darkCard text-accentPurple font-semibold px-2 py-1 rounded-md text-sm outline-none border border-darkBorder cursor-pointer">
+                                <option value="0">Januari</option>
+                                <option value="1">Februari</option>
+                                <option value="2">Mac</option>
+                                <option value="3">April</option>
+                                <option value="4">Mei</option>
+                                <option value="5">Jun</option>
+                                <option value="6">Julai</option>
+                                <option value="7">Ogos</option>
+                                <option value="8">September</option>
+                                <option value="9">Oktober</option>
+                                <option value="10">November</option>
+                                <option value="11">Disember</option>
+                            </select>
+
+                            <select id="yearSelect" onchange="onDateSelectionChange()" class="bg-darkCard text-white font-semibold px-2 py-1 rounded-md text-sm outline-none border border-darkBorder cursor-pointer">
+                                <!-- Populated by JS -->
+                            </select>
+                        </div>
+
+                        <button onclick="changeMonth(1)" class="p-2 text-gray-400 hover:text-white rounded-lg hover:bg-darkCard transition">
+                            <i class="fa-solid fa-chevron-right"></i>
+                        </button>
+
+                        <button onclick="setCurrentMonth()" class="text-xs bg-accentPurple/20 hover:bg-accentPurple/30 text-accentPurple px-2.5 py-1.5 rounded-lg transition font-medium">
+                            Bulan Ini
+                        </button>
+                    </div>
+
+                    <!-- Logout Button -->
+                    <button onclick="handleLogout()" class="p-2.5 bg-darkBg border border-darkBorder hover:bg-accentRed/20 hover:text-accentRed text-gray-400 rounded-xl transition" title="Log Keluar">
+                        <i class="fa-solid fa-right-from-bracket"></i>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content Container -->
+        <main class="max-w-7xl mx-auto px-3 sm:px-6 pt-6 space-y-6">
+
+            <!-- Section 3: Weekly Quote Box (Top Banner) -->
+            <section class="bg-darkCard rounded-2xl p-4 sm:p-5 border border-darkBorder relative overflow-hidden shadow-lg">
+                <div class="absolute top-0 left-0 w-1.5 h-full bg-accentPurple"></div>
+                <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                    <div class="flex items-center space-x-3 w-full sm:w-auto">
+                        <div class="p-2.5 bg-accentPurple/10 text-accentPurple rounded-xl shrink-0">
+                            <i class="fa-solid fa-quote-left text-lg"></i>
+                        </div>
+                        <div class="w-full">
+                            <h2 class="text-xs uppercase tracking-wider font-semibold text-accentPurple">Petikan Mingguan / Motivasi</h2>
+                            <input type="text" id="weeklyQuoteInput" oninput="saveWeeklyQuote()" placeholder="Tulis quote inspirasi minggu ini di sini..." class="w-full bg-transparent text-white font-medium text-sm sm:text-base border-b border-transparent focus:border-accentPurple outline-none py-1 transition placeholder-gray-500">
+                        </div>
+                    </div>
+                    <span class="text-xs text-gray-500 italic self-end sm:self-center shrink-0 flex items-center gap-1">
+                        <i class="fa-solid fa-cloud-arrow-up text-accentGreen"></i> Cloud-Synced
+                    </span>
+                </div>
+            </section>
+
+            <!-- Navigation Tabs (Mobile Friendly) -->
+            <div class="flex items-center space-x-2 border-b border-darkBorder overflow-x-auto custom-scrollbar pb-2">
+                <button onclick="switchTab('tab-habits')" id="btn-tab-habits" class="tab-btn active-tab flex items-center space-x-2 px-4 py-2.5 rounded-xl text-sm font-semibold whitespace-nowrap transition">
+                    <i class="fa-solid fa-list-check"></i>
+                    <span>Habit Tracker</span>
+                </button>
+                <button onclick="switchTab('tab-calendar')" id="btn-tab-calendar" class="tab-btn flex items-center space-x-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-gray-400 hover:text-white whitespace-nowrap transition">
+                    <i class="fa-regular fa-calendar-days"></i>
+                    <span>Kalendar & Sasaran</span>
+                </button>
+                <button onclick="switchTab('tab-mood')" id="btn-tab-mood" class="tab-btn flex items-center space-x-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-gray-400 hover:text-white whitespace-nowrap transition">
+                    <i class="fa-regular fa-face-smile"></i>
+                    <span>Mood Tracker</span>
+                </button>
+                <button onclick="switchTab('tab-goals')" id="btn-tab-goals" class="tab-btn flex items-center space-x-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-gray-400 hover:text-white whitespace-nowrap transition">
+                    <i class="fa-solid fa-fire text-accentPink"></i>
+                    <span>Monthly Goals (Streak)</span>
+                </button>
+                <button onclick="switchTab('tab-reflection')" id="btn-tab-reflection" class="tab-btn flex items-center space-x-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-gray-400 hover:text-white whitespace-nowrap transition">
+                    <i class="fa-solid fa-brain"></i>
+                    <span>Refleksi Bulanan</span>
+                </button>
+            </div>
+
+            <!-- TAB CONTENT 1: HABIT TRACKER MATRIX -->
+            <div id="tab-habits" class="tab-content">
+                <div class="bg-darkCard rounded-2xl border border-darkBorder p-4 sm:p-5 shadow-xl space-y-4">
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                        <div>
+                            <h2 class="text-lg font-bold text-white flex items-center gap-2">
+                                <span>Habit Tracker Harian</span>
+                                <span id="daysCountBadge" class="text-xs font-normal bg-accentPurple/20 text-accentPurple px-2 py-0.5 rounded-full">31 Hari</span>
+                            </h2>
+                            <p class="text-xs text-gray-400">Tick tugasan rutin anda mengikut hari sepanjang bulan ini.</p>
+                        </div>
+
+                        <!-- Add Habit Trigger -->
+                        <button onclick="openAddHabitModal()" class="w-full sm:w-auto bg-accentPurple hover:bg-accentPurple/90 text-darkBg font-bold text-sm px-4 py-2.5 rounded-xl transition flex items-center justify-center space-x-2 shadow-lg">
+                            <i class="fa-solid fa-plus"></i>
+                            <span>Tambah Habit Baru</span>
+                        </button>
+                    </div>
+
+                    <!-- Habit Matrix Table (Horizontal Scrollable) -->
+                    <div class="overflow-x-auto custom-scrollbar border border-darkBorder rounded-xl bg-darkBg">
+                        <table class="w-full text-left border-collapse min-w-[700px]">
+                            <thead>
+                                <tr class="bg-darkCard border-b border-darkBorder text-xs text-gray-400">
+                                    <th class="p-3 sticky-col-header min-w-[180px] sm:min-w-[220px] shadow-r">Kategori & Nama Habit</th>
+                                    <th id="daysHeaderRow" class="p-0">
+                                        <!-- Dynamic Days Header (1-31) JS -->
+                                    </th>
+                                    <th class="p-3 text-center min-w-[70px]">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody id="habitMatrixBody">
+                                <!-- Populated dynamically via JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB CONTENT 2: MONTHLY CALENDAR & TARGETS -->
+            <div id="tab-calendar" class="tab-content hidden">
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <!-- Left: Calendar Grid -->
+                    <div class="lg:col-span-2 bg-darkCard rounded-2xl p-4 sm:p-5 border border-darkBorder shadow-xl space-y-4">
+                        <div class="flex items-center justify-between">
+                            <h2 class="text-lg font-bold text-white flex items-center gap-2">
+                                <i class="fa-regular fa-calendar text-accentPurple"></i>
+                                <span id="calendarTitle">Kalendar Bulanan</span>
+                            </h2>
+                            <span class="text-xs text-gray-400">Tekan mana-mana tarikh untuk simpan sasaran</span>
+                        </div>
+
+                        <!-- Days of Week Header -->
+                        <div class="grid grid-cols-7 text-center text-xs font-semibold text-gray-400 py-2 border-b border-darkBorder">
+                            <div class="text-accentRed">Ahad</div>
+                            <div>Isnin</div>
+                            <div>Selasa</div>
+                            <div>Rabu</div>
+                            <div>Khamis</div>
+                            <div>Jumaat</div>
+                            <div class="text-accentCyan">Sabtu</div>
+                        </div>
+
+                        <!-- Calendar Grid Body -->
+                        <div id="calendarGrid" class="grid grid-cols-7 gap-1.5 sm:gap-2">
+                            <!-- Populated by JS -->
+                        </div>
+                    </div>
+
+                    <!-- Right: Daily Note / Due Date Details -->
+                    <div class="bg-darkCard rounded-2xl p-4 sm:p-5 border border-darkBorder shadow-xl flex flex-col justify-between space-y-4">
+                        <div>
+                            <div class="flex items-center justify-between border-b border-darkBorder pb-3">
+                                <h3 id="selectedDateHeader" class="font-bold text-accentPurple text-base">Tarikh: -</h3>
+                                <span class="text-xs bg-darkBg border border-darkBorder px-2.5 py-1 rounded-lg text-gray-400">Target / Due Date</span>
+                            </div>
+
+                            <div class="mt-4 space-y-3">
+                                <label class="block text-xs font-semibold text-gray-300">Sasaran / Tugasan / Due Date Hari Ini:</label>
+                                <textarea id="dailyTargetInput" placeholder="Contoh: Submit rekabentuk UI, Bayar bil elektrik, atau Target lari 5km..." class="w-full h-40 bg-darkBg border border-darkBorder rounded-xl p-3 text-sm text-white focus:border-accentPurple outline-none transition resize-none"></textarea>
+                            </div>
+                        </div>
+
+                        <button onclick="saveDailyTarget()" class="w-full bg-accentPurple text-darkBg font-bold py-2.5 rounded-xl transition hover:opacity-90 shadow-md">
+                            Simpan Sasaran Tarikh Ini
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB CONTENT 3: DAILY MOOD TRACKER -->
+            <div id="tab-mood" class="tab-content hidden">
+                <div class="bg-darkCard rounded-2xl p-4 sm:p-5 border border-darkBorder shadow-xl space-y-6">
+                    <div>
+                        <h2 class="text-lg font-bold text-white flex items-center gap-2">
+                            <i class="fa-solid fa-face-smile text-accentPink"></i>
+                            <span>Mood Tracker Harian</span>
+                        </h2>
+                        <p class="text-xs text-gray-400">Pantau corak emosi dan tahap tenaga anda setiap hari sepanjang bulan ini.</p>
+                    </div>
+
+                    <!-- Mood Selector Grid for current month -->
+                    <div id="moodDaysGrid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                        <!-- Populated dynamically by JS -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB CONTENT 4: MONTHLY GOALS WITH RESET MECHANIC -->
+            <div id="tab-goals" class="tab-content hidden">
+                <div class="bg-darkCard rounded-2xl p-4 sm:p-5 border border-darkBorder shadow-xl space-y-6">
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                        <div>
+                            <h2 class="text-lg font-bold text-white flex items-center gap-2">
+                                <i class="fa-solid fa-fire text-accentPink"></i>
+                                <span>Monthly Goal Streak Tracker</span>
+                            </h2>
+                            <p class="text-xs text-gray-400">Sasaran dengan mekanik cabaran: Jika gagal/miss hari ini, streak akan **Reset kepada 0**!</p>
+                        </div>
+
+                        <button onclick="openAddGoalModal()" class="w-full sm:w-auto bg-accentPink hover:bg-accentPink/90 text-darkBg font-bold text-sm px-4 py-2.5 rounded-xl transition flex items-center justify-center space-x-2 shadow-lg">
+                            <i class="fa-solid fa-plus"></i>
+                            <span>Tambah Goal Cabaran</span>
+                        </button>
+                    </div>
+
+                    <!-- Goals List Container -->
+                    <div id="monthlyGoalsList" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB CONTENT 5: MONTHLY REFLECTION -->
+            <div id="tab-reflection" class="tab-content hidden">
+                <div class="bg-darkCard rounded-2xl p-4 sm:p-5 border border-darkBorder shadow-xl space-y-6">
+                    <div>
+                        <h2 class="text-lg font-bold text-white flex items-center gap-2">
+                            <i class="fa-solid fa-brain text-accentCyan"></i>
+                            <span>Refleksi & Kenangan Bulanan</span>
+                        </h2>
+                        <p class="text-xs text-gray-400">Semak semula perkembangan dan pencapaian anda untuk bulan ini.</p>
+                    </div>
+
+                    <div class="space-y-4">
+                        <div class="space-y-1.5">
+                            <label class="text-sm font-semibold text-accentPurple flex items-center gap-2">
+                                <i class="fa-solid fa-smile-beam"></i>
+                                <span>1. What made me happiest? (Apa yang paling membahagiakan saya?)</span>
+                            </label>
+                            <textarea id="refl-happiest" oninput="saveReflection()" placeholder="Tulis catatan di sini..." class="w-full h-24 bg-darkBg border border-darkBorder rounded-xl p-3 text-sm text-white focus:border-accentPurple outline-none transition resize-none"></textarea>
+                        </div>
+
+                        <div class="space-y-1.5">
+                            <label class="text-sm font-semibold text-accentCyan flex items-center gap-2">
+                                <i class="fa-solid fa-book-open"></i>
+                                <span>2. What did I learn? (Apa yang telah saya pelajari?)</span>
+                            </label>
+                            <textarea id="refl-learned" oninput="saveReflection()" placeholder="Tulis pengajaran atau ilmu baharu..." class="w-full h-24 bg-darkBg border border-darkBorder rounded-xl p-3 text-sm text-white focus:border-accentCyan outline-none transition resize-none"></textarea>
+                        </div>
+
+                        <div class="space-y-1.5">
+                            <label class="text-sm font-semibold text-accentGreen flex items-center gap-2">
+                                <i class="fa-solid fa-trophy"></i>
+                                <span>3. What am I proud of? (Apa yang saya paling banggakan?)</span>
+                            </label>
+                            <textarea id="refl-proud" oninput="saveReflection()" placeholder="Pencapaian kecil atau besar..." class="w-full h-24 bg-darkBg border border-darkBorder rounded-xl p-3 text-sm text-white focus:border-accentGreen outline-none transition resize-none"></textarea>
+                        </div>
+
+                        <div class="space-y-1.5">
+                            <label class="text-sm font-semibold text-accentPink flex items-center gap-2">
+                                <i class="fa-solid fa-chart-line"></i>
+                                <span>4. What should I improve next month? (Apa yang perlu diimbangi / diperbaiki?)</span>
+                            </label>
+                            <textarea id="refl-improve" oninput="saveReflection()" placeholder="Kelemahan atau perkara yang boleh ditambah baik..." class="w-full h-24 bg-darkBg border border-darkBorder rounded-xl p-3 text-sm text-white focus:border-accentPink outline-none transition resize-none"></textarea>
+                        </div>
+
+                        <div class="space-y-1.5">
+                            <label class="text-sm font-semibold text-yellow-400 flex items-center gap-2">
+                                <i class="fa-solid fa-star"></i>
+                                <span>5. Favorite memory? (Kenangan terindah bulan ini?)</span>
+                            </label>
+                            <textarea id="refl-memory" oninput="saveReflection()" placeholder="Momen bermakna bersama kawan, keluarga atau diri sendiri..." class="w-full h-24 bg-darkBg border border-darkBorder rounded-xl p-3 text-sm text-white focus:border-yellow-400 outline-none transition resize-none"></textarea>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <!-- MODAL: Tambah Habit Baru -->
+    <div id="addHabitModal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-darkCard border border-darkBorder w-full max-w-md rounded-2xl p-5 space-y-4 shadow-2xl">
+            <div class="flex justify-between items-center border-b border-darkBorder pb-3">
+                <h3 class="font-bold text-white text-base">Tambah Habit Baru</h3>
+                <button onclick="closeAddHabitModal()" class="text-gray-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+
+            <div class="space-y-3">
+                <div>
+                    <label class="block text-xs font-semibold text-gray-300 mb-1">Nama Habit</label>
+                    <input type="text" id="newHabitName" placeholder="Contoh: Baca Al-Quran 10 Minit, Solat Dhuha, Workout..." class="w-full bg-darkBg border border-darkBorder rounded-xl p-2.5 text-sm text-white focus:border-accentPurple outline-none">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-gray-300 mb-1">Kategori Habit</label>
+                    <select id="newHabitCategory" class="w-full bg-darkBg border border-darkBorder rounded-xl p-2.5 text-sm text-white focus:border-accentPurple outline-none">
+                        <option value="Kesihatan & Kecergasan">Kesihatan & Kecergasan</option>
+                        <option value="Disiplin & Kerohanian">Disiplin & Kerohanian</option>
+                        <option value="Kerja & Belajar">Kerja & Belajar</option>
+                        <option value="Pengembangan Diri">Pengembangan Diri</option>
+                        <option value="Lain-lain">Lain-lain</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="flex justify-end space-x-2 pt-2">
+                <button onclick="closeAddHabitModal()" class="px-4 py-2 rounded-xl text-xs font-medium text-gray-400 hover:text-white bg-darkBg border border-darkBorder">Batal</button>
+                <button onclick="saveNewHabit()" class="px-4 py-2 rounded-xl text-xs font-bold text-darkBg bg-accentPurple hover:bg-accentPurple/90">Simpan Habit</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: Tambah Goal Streak Baru -->
+    <div id="addGoalModal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-darkCard border border-darkBorder w-full max-w-md rounded-2xl p-5 space-y-4 shadow-2xl">
+            <div class="flex justify-between items-center border-b border-darkBorder pb-3">
+                <h3 class="font-bold text-white text-base">Tambah Monthly Goal (Streak)</h3>
+                <button onclick="closeAddGoalModal()" class="text-gray-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+
+            <div class="space-y-3">
+                <div>
+                    <label class="block text-xs font-semibold text-gray-300 mb-1">Tajuk Goal / Sasaran</label>
+                    <input type="text" id="newGoalTitle" placeholder="Contoh: Tanpa Gula 30 Hari, Pushup 50x Sehari..." class="w-full bg-darkBg border border-darkBorder rounded-xl p-2.5 text-sm text-white focus:border-accentPink outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-300 mb-1">Sasaran Hari (Target Streak)</label>
+                    <input type="number" id="newGoalTarget" value="30" min="1" max="31" class="w-full bg-darkBg border border-darkBorder rounded-xl p-2.5 text-sm text-white focus:border-accentPink outline-none">
+                </div>
+            </div>
+
+            <div class="flex justify-end space-x-2 pt-2">
+                <button onclick="closeAddGoalModal()" class="px-4 py-2 rounded-xl text-xs font-medium text-gray-400 hover:text-white bg-darkBg border border-darkBorder">Batal</button>
+                <button onclick="saveNewGoal()" class="px-4 py-2 rounded-xl text-xs font-bold text-darkBg bg-accentPink hover:bg-accentPink/90">Simpan Goal</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- FIREBASE MODULES INTEGRATION -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { 
+            getAuth, 
+            signInWithCustomToken, 
+            signInAnonymously, 
+            createUserWithEmailAndPassword, 
+            signInWithEmailAndPassword, 
+            signOut, 
+            onAuthStateChanged 
+        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { 
+            getFirestore, 
+            doc, 
+            setDoc, 
+            onSnapshot 
+        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Global Firebase Configuration & Variables
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'journal-app-default';
+        const firebaseConfig = typeof __firebase_config !== 'undefined' 
+            ? JSON.parse(__firebase_config) 
+            : { apiKey: "demo", authDomain: "demo.firebaseapp.com", projectId: "demo" };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        let currentUser = null;
+        let unsubscribeDocListener = null;
+
+        // --- GLOBAL STATE ---
+        const monthNames = ["Januari", "Februari", "Mac", "April", "Mei", "Jun", "Julai", "Ogos", "September", "Oktober", "November", "Disember"];
+        let currentYear = new Date().getFullYear();
+        let currentMonth = new Date().getMonth(); 
+        let selectedCalendarDay = 1;
+        let isLoginMode = true;
+
+        let monthData = {
+            weeklyQuote: "",
+            habits: [],
+            targets: {},
+            moods: {},
+            goals: [],
+            reflection: { happiest: "", learned: "", proud: "", improve: "", memory: "" }
+        };
+
+        const moodTypes = [
+            { id: 'happy', emoji: '🤩', label: 'Gembira', color: 'bg-emerald-500/20 border-emerald-500 text-emerald-400' },
+            { id: 'good', emoji: '😊', label: 'Baik', color: 'bg-blue-500/20 border-blue-500 text-blue-400' },
+            { id: 'neutral', emoji: '😐', label: 'Biasa', color: 'bg-gray-500/20 border-gray-500 text-gray-300' },
+            { id: 'down', emoji: '😔', label: 'Sedih', color: 'bg-amber-500/20 border-amber-500 text-amber-400' },
+            { id: 'stressed', emoji: '😤', label: 'Stres', color: 'bg-rose-500/20 border-rose-500 text-rose-400' }
+        ];
+
+        const defaultHabitsTemplate = [
+            { id: 'h1', name: 'Solat 5 Waktu / Disiplin Diri', category: 'Disiplin & Kerohanian', checkedDays: [] },
+            { id: 'h2', name: 'Senaman / Brisk Walk 20 Min', category: 'Kesihatan & Kecergasan', checkedDays: [] },
+            { id: 'h3', name: 'Minum 2L Air Kosong', category: 'Kesihatan & Kecergasan', checkedDays: [] },
+            { id: 'h4', name: 'Belajar / Work Project Focus', category: 'Kerja & Belajar', checkedDays: [] }
+        ];
+
+        // INITIAL AUTH SETUP & LISTENERS
+        async function initAuth() {
+            if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                try {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                } catch (e) {
+                    console.warn("Custom token auth error, falling back", e);
+                }
+            }
+
+            onAuthStateChanged(auth, (user) => {
+                currentUser = user;
+                if (user) {
+                    document.getElementById('authScreen').classList.add('hidden');
+                    document.getElementById('appScreen').classList.remove('hidden');
+                    document.getElementById('userEmailDisplay').textContent = user.email || user.uid;
+                    
+                    initYearDropdown();
+                    setCurrentMonthUI();
+                    subscribeToMonthData();
+                } else {
+                    document.getElementById('authScreen').classList.remove('hidden');
+                    document.getElementById('appScreen').classList.add('hidden');
+                    if (unsubscribeDocListener) unsubscribeDocListener();
+                }
+            });
+        }
+
+        // --- AUTH UI HANDLERS ---
+        window.toggleAuthMode = function() {
+            isLoginMode = !isLoginMode;
+            document.getElementById('authAlert').classList.add('hidden');
+            if (isLoginMode) {
+                document.getElementById('authTitle').textContent = "Log Masuk Jurnal";
+                document.getElementById('authSubtitle').textContent = "Akses habit & refleksi harian anda di mana-mana jua peranti.";
+                document.getElementById('authSubmitBtn').textContent = "Log Masuk";
+                document.getElementById('authToggleBtn').textContent = "Belum ada akaun? Daftar Akaun Baharu";
+            } else {
+                document.getElementById('authTitle').textContent = "Daftar Akaun Baharu";
+                document.getElementById('authSubtitle').textContent = "Cipta akaun untuk mula menyimpan jurnal secara percuma.";
+                document.getElementById('authSubmitBtn').textContent = "Daftar Akaun";
+                document.getElementById('authToggleBtn').textContent = "Sudah ada akaun? Log Masuk";
+            }
+        };
+
+        window.handleAuthSubmit = async function(e) {
+            e.preventDefault();
+            const alertBox = document.getElementById('authAlert');
+            alertBox.classList.add('hidden');
+            
+            const email = document.getElementById('authEmail').value;
+            const password = document.getElementById('authPassword').value;
+
+            try {
+                if (isLoginMode) {
+                    await signInWithEmailAndPassword(auth, email, password);
+                } else {
+                    await createUserWithEmailAndPassword(auth, email, password);
+                }
+            } catch (err) {
+                alertBox.textContent = err.message || "Ralat mendaftar / log masuk.";
+                alertBox.classList.remove('hidden');
+            }
+        };
+
+        window.handleLogout = async function() {
+            if (confirm("Adakah anda pasti mahu log keluar?")) {
+                await signOut(auth);
+            }
+        };
+
+        // --- FIRESTORE REALTIME SYNC (RULE 1 & RULE 2 COMPLIANT) ---
+        function getDocRef() {
+            if (!currentUser) return null;
+            const monthKey = `${currentYear}_${currentMonth}`;
+            // Strict private path: /artifacts/{appId}/users/{userId}/months/{monthKey}
+            return doc(db, 'artifacts', appId, 'users', currentUser.uid, 'months', monthKey);
+        }
+
+        function subscribeToMonthData() {
+            if (unsubscribeDocListener) unsubscribeDocListener();
+            const docRef = getDocRef();
+            if (!docRef) return;
+
+            unsubscribeDocListener = onSnapshot(docRef, (snapshot) => {
+                if (snapshot.exists()) {
+                    monthData = snapshot.data();
+                } else {
+                    monthData = getEmptyMonthStructure();
+                }
+                renderAllSections();
+            }, (error) => {
+                console.error("Firestore sync error:", error);
+            });
+        }
+
+        async function saveMonthData() {
+            const docRef = getDocRef();
+            if (!docRef || !currentUser) return;
+            try {
+                await setDoc(docRef, monthData, { merge: true });
+            } catch (err) {
+                console.error("Error saving data to Firestore:", err);
+            }
+        }
+
+        function getEmptyMonthStructure() {
+            return {
+                weeklyQuote: "",
+                habits: JSON.parse(JSON.stringify(defaultHabitsTemplate)),
+                targets: {},
+                moods: {},
+                goals: [
+                    { id: 'g1', title: 'Tanpa Minuman Manis (30 Hari)', targetDays: 30, currentStreak: 0 }
+                ],
+                reflection: { happiest: "", learned: "", proud: "", improve: "", memory: "" }
+            };
+        }
+
+        // --- CALENDAR & MONTH CONTROLS ---
+        function getDaysInMonth(year, month) {
+            return new Date(year, month + 1, 0).getDate();
+        }
+
+        function initYearDropdown() {
+            const yearSelect = document.getElementById('yearSelect');
+            yearSelect.innerHTML = '';
+            const startYear = currentYear - 2;
+            const endYear = currentYear + 5;
+            for (let y = startYear; y <= endYear; y++) {
+                const opt = document.createElement('option');
+                opt.value = y;
+                opt.textContent = y;
+                if (y === currentYear) opt.selected = true;
+                yearSelect.appendChild(opt);
+            }
+        }
+
+        function setCurrentMonthUI() {
+            document.getElementById('monthSelect').value = currentMonth;
+            document.getElementById('yearSelect').value = currentYear;
+        }
+
+        window.setCurrentMonth = function() {
+            const now = new Date();
+            currentYear = now.getFullYear();
+            currentMonth = now.getMonth();
+            setCurrentMonthUI();
+            subscribeToMonthData();
+        };
+
+        window.changeMonth = function(delta) {
+            currentMonth += delta;
+            if (currentMonth > 11) {
+                currentMonth = 0;
+                currentYear++;
+            } else if (currentMonth < 0) {
+                currentMonth = 11;
+                currentYear--;
+            }
+            setCurrentMonthUI();
+            subscribeToMonthData();
+        };
+
+        window.onDateSelectionChange = function() {
+            currentMonth = parseInt(document.getElementById('monthSelect').value);
+            currentYear = parseInt(document.getElementById('yearSelect').value);
+            subscribeToMonthData();
+        };
+
+        // --- RENDER ALL SECTIONS ---
+        function renderAllSections() {
+            renderWeeklyQuote();
+            renderHabitTracker();
+            renderCalendar();
+            renderMoodTracker();
+            renderGoals();
+            renderReflection();
+        }
+
+        // --- TAB NAVIGATION ---
+        window.switchTab = function(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('active-tab', 'text-accentPurple', 'border-b-2', 'border-accentPurple');
+                btn.classList.add('text-gray-400');
+            });
+
+            document.getElementById(tabId).classList.remove('hidden');
+            const activeBtn = document.getElementById(`btn-${tabId}`);
+            activeBtn.classList.add('active-tab', 'text-accentPurple');
+        };
+
+        // --- SECTION 3: WEEKLY QUOTE ---
+        function renderWeeklyQuote() {
+            document.getElementById('weeklyQuoteInput').value = monthData.weeklyQuote || "";
+        }
+
+        window.saveWeeklyQuote = function() {
+            monthData.weeklyQuote = document.getElementById('weeklyQuoteInput').value;
+            saveMonthData();
+        };
+
+        // --- SECTION 2: HABIT TRACKER ---
+        function renderHabitTracker() {
+            const totalDays = getDaysInMonth(currentYear, currentMonth);
+            document.getElementById('daysCountBadge').textContent = `${totalDays} Hari`;
+
+            const daysHeaderRow = document.getElementById('daysHeaderRow');
+            let headerHTML = `<div class="flex items-center">`;
+            for (let d = 1; d <= totalDays; d++) {
+                headerHTML += `<div class="w-8 sm:w-9 text-center font-semibold text-[11px] border-r border-darkBorder/40 shrink-0">${d}</div>`;
+            }
+            headerHTML += `</div>`;
+            daysHeaderRow.innerHTML = headerHTML;
+
+            const tbody = document.getElementById('habitMatrixBody');
+            tbody.innerHTML = '';
+
+            if (!monthData.habits || monthData.habits.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="3" class="p-6 text-center text-gray-500 text-sm">Tiada habit ditemui. Sila tekan 'Tambah Habit Baru'.</td></tr>`;
+                return;
+            }
+
+            monthData.habits.forEach((habit) => {
+                const tr = document.createElement('tr');
+                tr.className = "border-b border-darkBorder/60 hover:bg-darkCard/40 transition";
+
+                let rowHTML = `
+                    <td class="p-3 sticky-col text-xs font-medium border-r border-darkBorder">
+                        <div class="font-bold text-white text-xs sm:text-sm line-clamp-1">${escapeHtml(habit.name)}</div>
+                        <div class="text-[10px] text-accentPurple opacity-80">${escapeHtml(habit.category)}</div>
+                    </td>
+                    <td class="p-0">
+                        <div class="flex items-center">
+                `;
+
+                for (let d = 1; d <= totalDays; d++) {
+                    const isChecked = habit.checkedDays && habit.checkedDays.includes(d);
+                    rowHTML += `
+                        <div onclick="toggleHabitDay('${habit.id}', ${d})" 
+                            class="w-8 sm:w-9 h-10 flex items-center justify-center border-r border-darkBorder/40 cursor-pointer shrink-0 transition hover:bg-accentPurple/10">
+                            <div class="w-5 h-5 rounded-md flex items-center justify-center transition ${isChecked ? 'bg-accentPurple text-darkBg' : 'border border-darkBorder hover:border-accentPurple'}">
+                                ${isChecked ? '<i class="fa-solid fa-check text-xs font-bold"></i>' : ''}
+                            </div>
+                        </div>
+                    `;
+                }
+
+                rowHTML += `
+                        </div>
+                    </td>
+                    <td class="p-2 text-center">
+                        <button onclick="deleteHabit('${habit.id}')" class="text-gray-500 hover:text-accentRed p-1 transition">
+                            <i class="fa-solid fa-trash-can text-xs"></i>
+                        </button>
+                    </td>
+                `;
+
+                tr.innerHTML = rowHTML;
+                tbody.appendChild(tr);
+            });
+        }
+
+        window.toggleHabitDay = function(habitId, day) {
+            const habit = monthData.habits.find(h => h.id === habitId);
+            if (!habit) return;
+            if (!habit.checkedDays) habit.checkedDays = [];
+
+            const index = habit.checkedDays.indexOf(day);
+            if (index > -1) {
+                habit.checkedDays.splice(index, 1);
+            } else {
+                habit.checkedDays.push(day);
+            }
+
+            saveMonthData();
+            renderHabitTracker();
+        };
+
+        window.openAddHabitModal = function() {
+            document.getElementById('addHabitModal').classList.remove('hidden');
+        };
+
+        window.closeAddHabitModal = function() {
+            document.getElementById('addHabitModal').classList.add('hidden');
+            document.getElementById('newHabitName').value = '';
+        };
+
+        window.saveNewHabit = function() {
+            const name = document.getElementById('newHabitName').value.trim();
+            const category = document.getElementById('newHabitCategory').value;
+
+            if (!name) return;
+
+            const newHabit = {
+                id: 'h_' + Date.now(),
+                name: name,
+                category: category,
+                checkedDays: []
+            };
+
+            if (!monthData.habits) monthData.habits = [];
+            monthData.habits.push(newHabit);
+            saveMonthData();
+            renderHabitTracker();
+            closeAddHabitModal();
+        };
+
+        window.deleteHabit = function(habitId) {
+            if (confirm("Adakah anda pasti mahu memadam habit ini?")) {
+                monthData.habits = monthData.habits.filter(h => h.id !== habitId);
+                saveMonthData();
+                renderHabitTracker();
+            }
+        };
+
+        // --- SECTION 1: CALENDAR & TARGETS ---
+        function renderCalendar() {
+            document.getElementById('calendarTitle').textContent = `${monthNames[currentMonth]} ${currentYear}`;
+            
+            const grid = document.getElementById('calendarGrid');
+            grid.innerHTML = '';
+
+            const totalDays = getDaysInMonth(currentYear, currentMonth);
+            const firstDayIndex = new Date(currentYear, currentMonth, 1).getDay();
+
+            for (let p = 0; p < firstDayIndex; p++) {
+                const emptyCell = document.createElement('div');
+                emptyCell.className = 'h-16 sm:h-20 bg-darkBg/30 rounded-xl border border-transparent';
+                grid.appendChild(emptyCell);
+            }
+
+            for (let day = 1; day <= totalDays; day++) {
+                const hasTarget = monthData.targets && monthData.targets[day] && monthData.targets[day].trim() !== '';
+                const isSelected = day === selectedCalendarDay;
+
+                const dayCell = document.createElement('div');
+                dayCell.onclick = () => selectCalendarDay(day);
+                dayCell.className = `h-16 sm:h-20 p-2 rounded-xl border flex flex-col justify-between cursor-pointer transition relative ${
+                    isSelected 
+                        ? 'border-accentPurple bg-accentPurple/10' 
+                        : 'border-darkBorder bg-darkBg hover:border-gray-500'
+                }`;
+
+                dayCell.innerHTML = `
+                    <div class="flex justify-between items-center">
+                        <span class="text-xs font-bold ${isSelected ? 'text-accentPurple' : 'text-gray-300'}">${day}</span>
+                        ${hasTarget ? '<span class="w-2 h-2 rounded-full bg-accentPurple"></span>' : ''}
+                    </div>
+                    ${hasTarget ? `<p class="text-[10px] text-gray-400 line-clamp-2 leading-tight">${escapeHtml(monthData.targets[day])}</p>` : ''}
+                `;
+
+                grid.appendChild(dayCell);
+            }
+
+            selectCalendarDay(selectedCalendarDay > totalDays ? 1 : selectedCalendarDay, false);
+        }
+
+        function selectCalendarDay(day, shouldRender = true) {
+            selectedCalendarDay = day;
+            document.getElementById('selectedDateHeader').textContent = `${day} ${monthNames[currentMonth]} ${currentYear}`;
+            document.getElementById('dailyTargetInput').value = (monthData.targets && monthData.targets[day]) || '';
+
+            if (shouldRender) {
+                renderCalendar();
+            }
+        }
+
+        window.saveDailyTarget = function() {
+            const text = document.getElementById('dailyTargetInput').value.trim();
+            if (!monthData.targets) monthData.targets = {};
+
+            if (text) {
+                monthData.targets[selectedCalendarDay] = text;
+            } else {
+                delete monthData.targets[selectedCalendarDay];
+            }
+            saveMonthData();
+            renderCalendar();
+        };
+
+        // --- SECTION 4: MOOD TRACKER ---
+        function renderMoodTracker() {
+            const grid = document.getElementById('moodDaysGrid');
+            grid.innerHTML = '';
+
+            const totalDays = getDaysInMonth(currentYear, currentMonth);
+
+            for (let day = 1; day <= totalDays; day++) {
+                const currentMoodId = monthData.moods ? monthData.moods[day] : null;
+                const activeMoodObj = moodTypes.find(m => m.id === currentMoodId);
+
+                const card = document.createElement('div');
+                card.className = "bg-darkBg border border-darkBorder rounded-xl p-3 flex flex-col justify-between space-y-2";
+
+                let moodButtonsHTML = moodTypes.map(m => {
+                    const isSelected = currentMoodId === m.id;
+                    return `
+                        <button onclick="setMood(${day}, '${m.id}')" title="${m.label}" 
+                            class="p-1 rounded-lg text-lg transition hover:scale-115 ${isSelected ? 'bg-darkCard border border-accentPurple shadow' : 'opacity-40 hover:opacity-100'}">
+                            ${m.emoji}
+                        </button>
+                    `;
+                }).join('');
+
+                card.innerHTML = `
+                    <div class="flex justify-between items-center border-b border-darkBorder/50 pb-1.5">
+                        <span class="text-xs font-bold text-gray-300">${day} ${monthNames[currentMonth]}</span>
+                        ${activeMoodObj ? `<span class="text-[10px] px-2 py-0.5 rounded-full border ${activeMoodObj.color}">${activeMoodObj.emoji} ${activeMoodObj.label}</span>` : '<span class="text-[10px] text-gray-600">Tiada Data</span>'}
+                    </div>
+                    <div class="flex items-center justify-between pt-1">
+                        ${moodButtonsHTML}
+                    </div>
+                `;
+
+                grid.appendChild(card);
+            }
+        }
+
+        window.setMood = function(day, moodId) {
+            if (!monthData.moods) monthData.moods = {};
+
+            if (monthData.moods[day] === moodId) {
+                delete monthData.moods[day];
+            } else {
+                monthData.moods[day] = moodId;
+            }
+            saveMonthData();
+            renderMoodTracker();
+        };
+
+        // --- SECTION 6: MONTHLY GOALS WITH RESET MECHANIC ---
+        function renderGoals() {
+            const container = document.getElementById('monthlyGoalsList');
+            container.innerHTML = '';
+
+            if (!monthData.goals || monthData.goals.length === 0) {
+                container.innerHTML = `<div class="col-span-2 text-center py-6 text-gray-500 text-sm">Tiada monthly goal ditetapkan. Klik 'Tambah Goal Cabaran'.</div>`;
+                return;
+            }
+
+            monthData.goals.forEach(goal => {
+                const progressPercent = Math.min(Math.round((goal.currentStreak / goal.targetDays) * 100), 100);
+
+                const card = document.createElement('div');
+                card.className = "bg-darkBg border border-darkBorder rounded-2xl p-4 flex flex-col justify-between space-y-4 shadow-md relative overflow-hidden";
+
+                card.innerHTML = `
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <h3 class="font-bold text-white text-base">${escapeHtml(goal.title)}</h3>
+                            <p class="text-xs text-gray-400">Sasaran: ${goal.targetDays} Hari Berterusan</p>
+                        </div>
+                        <button onclick="deleteGoal('${goal.id}')" class="text-gray-500 hover:text-accentRed"><i class="fa-solid fa-trash-can text-xs"></i></button>
+                    </div>
+
+                    <div class="flex items-center justify-between bg-darkCard p-3 rounded-xl border border-darkBorder">
+                        <div class="flex items-center space-x-2">
+                            <i class="fa-solid fa-fire text-accentPink text-2xl"></i>
+                            <div>
+                                <div class="text-2xl font-black text-white leading-none">${goal.currentStreak} <span class="text-xs font-normal text-gray-400">Hari</span></div>
+                                <div class="text-[10px] text-accentPink font-semibold uppercase tracking-wider">Current Streak</div>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <span class="text-xs font-bold text-gray-300">${progressPercent}%</span>
+                        </div>
+                    </div>
+
+                    <div class="w-full bg-darkCard h-2 rounded-full overflow-hidden border border-darkBorder">
+                        <div class="bg-accentPink h-full transition-all duration-300" style="width: ${progressPercent}%"></div>
+                    </div>
+
+                    <div class="flex space-x-2 pt-1">
+                        <button onclick="incrementGoalStreak('${goal.id}')" class="flex-1 bg-accentGreen/20 hover:bg-accentGreen/30 text-accentGreen border border-accentGreen/40 font-bold py-2 rounded-xl text-xs transition flex items-center justify-center space-x-1.5">
+                            <i class="fa-solid fa-plus"></i>
+                            <span>Berjaya Hari Ini</span>
+                        </button>
+                        <button onclick="resetGoalStreak('${goal.id}')" class="bg-accentRed/10 hover:bg-accentRed/20 text-accentRed border border-accentRed/30 font-bold px-3 py-2 rounded-xl text-xs transition flex items-center space-x-1" title="Gagal / Reset Kepada 0">
+                            <i class="fa-solid fa-rotate-left"></i>
+                            <span>Reset 0</span>
+                        </button>
+                    </div>
+                `;
+
+                container.appendChild(card);
+            });
+        }
+
+        window.openAddGoalModal = function() {
+            document.getElementById('addGoalModal').classList.remove('hidden');
+        };
+
+        window.closeAddGoalModal = function() {
+            document.getElementById('addGoalModal').classList.add('hidden');
+            document.getElementById('newGoalTitle').value = '';
+        };
+
+        window.saveNewGoal = function() {
+            const title = document.getElementById('newGoalTitle').value.trim();
+            const targetDays = parseInt(document.getElementById('newGoalTarget').value) || 30;
+
+            if (!title) return;
+
+            const newGoal = {
+                id: 'g_' + Date.now(),
+                title: title,
+                targetDays: targetDays,
+                currentStreak: 0
+            };
+
+            if (!monthData.goals) monthData.goals = [];
+            monthData.goals.push(newGoal);
+            saveMonthData();
+            renderGoals();
+            closeAddGoalModal();
+        };
+
+        window.incrementGoalStreak = function(goalId) {
+            const goal = monthData.goals.find(g => g.id === goalId);
+            if (goal) {
+                goal.currentStreak++;
+                saveMonthData();
+                renderGoals();
+            }
+        };
+
+        window.resetGoalStreak = function(goalId) {
+            if (confirm("Adakah anda gagal hari ini? Streak akan dikembangkan kepada 0!")) {
+                const goal = monthData.goals.find(g => g.id === goalId);
+                if (goal) {
+                    goal.currentStreak = 0;
+                    saveMonthData();
+                    renderGoals();
+                }
+            }
+        };
+
+        window.deleteGoal = function(goalId) {
+            if (confirm("Padam sasaran goal ini?")) {
+                monthData.goals = monthData.goals.filter(g => g.id !== goalId);
+                saveMonthData();
+                renderGoals();
+            }
+        };
+
+        // --- SECTION 5: MONTHLY REFLECTION ---
+        function renderReflection() {
+            const refl = monthData.reflection || {};
+            document.getElementById('refl-happiest').value = refl.happiest || "";
+            document.getElementById('refl-learned').value = refl.learned || "";
+            document.getElementById('refl-proud').value = refl.proud || "";
+            document.getElementById('refl-improve').value = refl.improve || "";
+            document.getElementById('refl-memory').value = refl.memory || "";
+        }
+
+        window.saveReflection = function() {
+            monthData.reflection = {
+                happiest: document.getElementById('refl-happiest').value,
+                learned: document.getElementById('refl-learned').value,
+                proud: document.getElementById('refl-proud').value,
+                improve: document.getElementById('refl-improve').value,
+                memory: document.getElementById('refl-memory').value
+            };
+            saveMonthData();
+        };
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+        }
+
+        // Initialize Firebase Authentication
+        initAuth();
+    </script>
+</body>
+</html>
